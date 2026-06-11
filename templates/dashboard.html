@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/index.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@shadcn/ui@latest/dist/index.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .date-picker {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .daily-view {
+            display: grid;
+            gap: 20px;
+        }
+
+        .section {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+
+        .section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item {
+            padding: 12px;
+            background: white;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item.task {
+            border-left-color: #28a745;
+        }
+
+        .item.reminder {
+            border-left-color: #ffc107;
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .item-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .date-display {
+            font-size: 18px;
+            font-weight: 600;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Calendar Dashboard</h1>
+            <div class="date-picker">
+                <label for="datepicker">Select Date:</label>
+                <input
+                    type="date"
+                    id="datepicker"
+                    value="{{ selected_date }}"
+                    onchange="updateDate(this.value)"
+                >
+            </div>
+        </div>
+
+        <div class="date-display" id="dateDisplay"></div>
+
+        <div class="daily-view">
+            <!-- Events Section -->
+            <div class="section">
+                <h2>
+                    <span class="section-icon">📌</span>
+                    Events
+                </h2>
+                <div class="items-list" id="eventsList">
+                    {% if items.events %}
+                        {% for event in items.events %}
+                            <div class="item event">
+                                <div class="item-content">
+                                    <div class="item-title">{{ event.title }}</div>
+                                    {% if event.start_time %}
+                                        <div class="item-time">{{ event.start_time }} - {{ event.end_time or 'TBD' }}</div>
+                                    {% endif %}
+                                    {% if event.description %}
+                                        <div class="item-time">{{ event.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">No events scheduled</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div class="section">
+                <h2>
+                    <span class="section-icon">✅</span>
+                    Tasks
+                </h2>
+                <div class="items-list" id="tasksList">
+                    {% if items.tasks %}
+                        {% for task in items.tasks %}
+                            <div class="item task">
+                                <div class="item-content">
+                                    <div class="item-title">{{ task.title }}</div>
+                                    <div class="item-time">Priority: {{ task.priority }} | Status: {% if task.completed %}Completed{% else %}Pending{% endif %}</div>
+                                    {% if task.description %}
+                                        <div class="item-time">{{ task.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">No tasks for this day</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reminders Section -->
+            <div class="section">
+                <h2>
+                    <span class="section-icon">🔔</span>
+                    Reminders
+                </h2>
+                <div class="items-list" id="remindersList">
+                    {% if items.reminders %}
+                        {% for reminder in items.reminders %}
+                            <div class="item reminder">
+                                <div class="item-content">
+                                    <div class="item-title">{{ reminder.title }}</div>
+                                    {% if reminder.time %}
+                                        <div class="item-time">{{ reminder.time }}</div>
+                                    {% endif %}
+                                    {% if reminder.description %}
+                                        <div class="item-time">{{ reminder.description }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">No reminders set</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateDate(date) {
+            window.location.href = `/?date=${date}`;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString + 'T00:00:00');
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formatted = date.toLocaleDateString('en-US', options);
+            const day = date.getDate();
+            const suffix = ['st', 'nd', 'rd'][((day + 90) % 100 - 10) % 10 - 1] || 'th';
+            const month = date.toLocaleDateString('en-US', { month: 'short' });
+            const year = date.getFullYear();
+            return `${day}${suffix} ${month} ${year}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectedDate = '{{ selected_date }}';
+            document.getElementById('dateDisplay').textContent = `Viewing: ${formatDate(selectedDate)}`;
+        });
+    </script>
+</body>
+</html>
